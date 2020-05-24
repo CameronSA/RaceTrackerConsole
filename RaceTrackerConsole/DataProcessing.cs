@@ -86,10 +86,43 @@ namespace RaceTrackerConsole
                         }
 
                         break;
-                    case 2:
+                    case 5:
+                        formattedLine.Append(cell);
+                        break;
+                    case 12:
+                        if (short.TryParse(cell.ToString(), out _))
+                        {
+                            formattedLine.Append(cell);
+                        }
+                        else
+                        {
+                            throw new Exception("Failed to process cell '" + cell + "'. Cell does not contain a number");
+                        }
+                        break;
+                    case 13:
+                        formattedLine.Append(cell);
+                        break;
+                    case 15:
+                        try
+                        {
+                            if (cell.ToLower().Contains("f"))
+                            {
+                                cell = cell.Replace("f", string.Empty);                                
+                            }
+
+                            string[] fractionElements = cell.Split('/');
+                            double fractionDecimal = double.Parse(fractionElements[0]) / double.Parse(fractionElements[1]);
+                            formattedLine.Append(fractionDecimal);
+                        }
+                        catch(Exception e)
+                        {
+                            throw new Exception("Failed to process cell '" + cell + "'. " + e.Message);
+                        }
                         break;
                 }
             }
+
+            return formattedLine;
         }
     }
 }
