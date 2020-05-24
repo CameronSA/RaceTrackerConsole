@@ -86,6 +86,8 @@ namespace RaceTrackerConsole
                         }
 
                         break;
+                    case 2:
+                        break;
                 }
             }
         }
