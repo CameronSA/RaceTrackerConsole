@@ -20,8 +20,8 @@
                 try
                 {
                     var urls = driver.GetResultsUrls(date);
-                    //for (int i = 0; i < urls.Count; i++)
-                    for (int i = 0; i < 1; i++)
+                    for (int i = 0; i < urls.Count; i++)
+                    //for (int i = 0; i < 1; i++)
                     {
                         var urlData = driver.GetRawRaceData(urls[i]);
                         for (int n = 0; n < urlData.Count; n++)
@@ -38,12 +38,12 @@
                     Console.WriteLine("An error occurred whilst mining data: ", e);
                 }
 
-                if (!Directory.Exists(AppSettings.RaceDataDirectory))
+                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
                 {
-                    Directory.CreateDirectory(AppSettings.RaceDataDirectory);
+                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
                 }
 
-                using (var file = new StreamWriter(AppSettings.RaceDataDirectory + "RaceData_" + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
+                using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + "RaceRawData_" + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
                 {
                     foreach (var row in overallData)
                     {

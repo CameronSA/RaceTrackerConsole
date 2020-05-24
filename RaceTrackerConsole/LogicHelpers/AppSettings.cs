@@ -4,11 +4,19 @@
 
     public static class AppSettings
     {
-        public static string RaceDataDirectory
+        public static string RaceRawDataDirectory
         { 
             get
             {
-                return ConfigurationManager.AppSettings["RaceDataDirectory"];
+                return ConfigurationManager.AppSettings["RaceRawDataDirectory"];
+            }
+        }
+
+        public static string RaceProcessedDataDirectory
+        {
+            get
+            {
+                return ConfigurationManager.AppSettings["RaceProcessedDataDirectory"];
             }
         }
 
@@ -17,6 +25,14 @@
             get
             {
                 return ConfigurationManager.AppSettings["RaceDataWebsite"];
+            }
+        }
+
+        public static string RaceDataResult
+        {
+            get
+            {
+                return ConfigurationManager.AppSettings["RaceDataResult"];
             }
         }
 

@@ -6,7 +6,9 @@
     {
         static void Main(string[] args)
         {
-            DataMining.DailyData(new DateTime(2019, 5, 2));
+            var date = new DateTime(2019, 5, 2);
+            //DataMining.DailyData(date);
+            DataProcessing.FormatDailyData(date);
         }
     }
 }
