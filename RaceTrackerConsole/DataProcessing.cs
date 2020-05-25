@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,7 +11,13 @@ namespace RaceTrackerConsole
 {
     public class DataProcessing
     {
-        public static void FormatDailyData(DateTime date)
+        private readonly Log log;
+        public DataProcessing()
+        {
+            this.log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
+        }
+
+        public void FormatDailyData(DateTime date)
         {
             string dateString = date.Year + "-" + date.Month + "-" + date.Day;
             foreach (var file in Directory.GetFiles(AppSettings.RaceRawDataDirectory))
@@ -29,14 +36,14 @@ namespace RaceTrackerConsole
                         } while (!fileReader.EndOfStream);
                     }
 
-                    if(!Directory.Exists(AppSettings.RaceProcessedDataDirectory))
+                    if (!Directory.Exists(AppSettings.RaceProcessedDataDirectory))
                     {
                         Directory.CreateDirectory(AppSettings.RaceProcessedDataDirectory);
                     }
 
                     using (var fileWriter = new StreamWriter(AppSettings.RaceProcessedDataDirectory + "RaceProcessedData_" + dateString + ".txt"))
                     {
-                        foreach(var line in processedLines)
+                        foreach (var line in processedLines)
                         {
                             fileWriter.WriteLine(line);
                         }
@@ -45,23 +52,23 @@ namespace RaceTrackerConsole
             }
         }
 
-        private static string FormatLine(string line, bool isHeader)
+        private string FormatLine(string line, bool isHeader)
         {
             var cells = line.Split(AppSettings.Delimiter);
             StringBuilder formattedLine;
             if (isHeader)
             {
-                formattedLine=ProcessHeaders(cells);
+                formattedLine = ProcessHeaders(cells);
             }
             else
             {
-                formattedLine=ProcessData(cells);
+                formattedLine = ProcessData(cells);
             }
 
             return formattedLine.ToString();
         }
 
-        private static StringBuilder ProcessHeaders(string[] cells)
+        private StringBuilder ProcessHeaders(string[] cells)
         {
             var formattedLine = new StringBuilder(string.Empty);
             for (int i = 0; i < cells.Length; i++)
@@ -93,7 +100,7 @@ namespace RaceTrackerConsole
             return formattedLine;
         }
 
-        private static StringBuilder ProcessData(string[] cells)
+        private StringBuilder ProcessData(string[] cells)
         {
             var formattedLine = new StringBuilder(string.Empty);
             for (int i = 0; i < cells.Length; i++)
@@ -115,7 +122,12 @@ namespace RaceTrackerConsole
                             }
                             else
                             {
-                                throw new Exception("Failed to process cell '" + cell + "'. Cell has " + cellElements.Length + " elements, but a minimum of 3 is required");
+                                this.log.Error("Failed to process cell '" + cell + "'. Cell has " + cellElements.Length + " elements, but a minimum of 3 is required");
+
+                                for (int n = 0; n < 3; n++)
+                                {
+                                    formattedLine.Append("ERROR" + AppSettings.Delimiter);
+                                }
                             }
 
                             break;
@@ -124,7 +136,7 @@ namespace RaceTrackerConsole
                             {
                                 var elements = cell.Split(' ');
                                 formattedLine.Append(elements[0] + AppSettings.Delimiter);
-                                formattedLine.Append(elements[1].Replace("(",string.Empty).Replace(")",string.Empty) + AppSettings.Delimiter);
+                                formattedLine.Append(elements[1].Replace("(", string.Empty).Replace(")", string.Empty) + AppSettings.Delimiter);
                             }
                             else
                             {
@@ -142,7 +154,8 @@ namespace RaceTrackerConsole
                             }
                             else
                             {
-                                throw new Exception("Failed to process cell '" + cell + "'. Cell does not contain a number");
+                                this.log.Error("Failed to process cell '" + cell + "'. Cell does not contain a number");
+                                formattedLine.Append("ERROR" + AppSettings.Delimiter);
                             }
                             break;
                         case 13:
@@ -173,19 +186,23 @@ namespace RaceTrackerConsole
                                 }
                                 else
                                 {
-                                    throw new Exception("Could not parse numerical values");
+                                    this.log.Error("Could not parse numerical values for cell '" + cell + "'");
+                                    formattedLine.Append("ERROR" + AppSettings.Delimiter + "ERROR");
                                 }
                             }
                             catch (Exception e)
                             {
-                                throw new Exception("Failed to process cell '" + cell + "'. " + e.Message);
+                                this.log.Error("Failed to process cell '" + cell + "'. " + e.Message);
+                                formattedLine.Append("ERROR" + AppSettings.Delimiter + "ERROR");
                             }
+
                             break;
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    formattedLine.Append("NULL");
+                    this.log.Error("Error encountered whilst processing cell '" + cell + "'", e);
+                    formattedLine.Append("ERROR");
                 }
             }
 

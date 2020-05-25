@@ -5,64 +5,98 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
+    using System.Reflection;
+    using System.Runtime.CompilerServices;
+    using System.Security.Policy;
 
     public class DataMining
     {
-        public static void DailyData(DateTime date)
+        private readonly Log log;
+
+        public DataMining()
+        {
+            this.log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
+        }
+
+        public void DailyData(List<DateTime> dates)
         {
             var driver = new WebDriver();
-            try
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            foreach (var date in dates)
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-                var overallData = new List<string>();
-                Console.WriteLine("Data mine initiated for date: " + date + ". . .");
                 try
                 {
-                    var urls = driver.GetResultsUrls(date);
-                    for (int i = 0; i < urls.Count; i++)
-                    //for (int i = 0; i < 1; i++)
+                    var dateStopwatch = new Stopwatch();
+                    dateStopwatch.Start();
+                    var overallData = new List<string>();
+                    this.log.Info("Data mine initiated for date: " + date + ". . .");
+                    int urlCount = 0;
+                    try
                     {
-                        var urlData = driver.GetRawRaceData(urls[i]);
-                        for (int n = 0; n < urlData.Count; n++)
+                        var urls = driver.GetResultsUrls(date);
+                        urlCount = urls.Count;
+                        if (urls.Count > 0)
                         {
-                            if (n > 0 || (i == 0))
+                            bool columnHeadersAdded = false;
+                            for (int i = 0; i < urls.Count; i++)
+                            //for (int i = 0; i < 1; i++)
                             {
-                                overallData.Add(urls[i] + AppSettings.Delimiter + urlData[n]);
+                                var urlData = driver.GetRawRaceData(urls[i]);
+                                for (int n = 0; n < urlData.Count; n++)
+                                {
+                                    if (urlData[n].StartsWith("ReportHeader:"))
+                                    {
+                                        overallData.Add(urlData[n]);
+                                    }
+                                    else
+                                    {
+                                        if (!columnHeadersAdded || n > 0)
+                                        {
+                                            overallData.Add(urls[i] + AppSettings.Delimiter + urlData[n]);
+                                            columnHeadersAdded = true;
+                                        }
+                                    }
+                                }
                             }
                         }
+                        else
+                        {
+                            this.log.Warn("No Urls found, terminating process for date '" + date + "'");
+                            return;
+                        }
                     }
+                    catch (Exception e)
+                    {
+                        this.log.Error("An error occurred whilst mining data: ", e);
+                    }
+
+                    if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
+                    {
+                        Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
+                    }
+
+                    using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + "RaceRawData_" + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
+                    {
+                        foreach (var row in overallData)
+                        {
+                            file.WriteLine(row);
+                        }
+                    }
+
+                    dateStopwatch.Stop();
+                    this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("An error occurred whilst mining data: ", e);
+                    this.log.Error(e.Message);
                 }
-
-                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
-                {
-                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
-                }
-
-                using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + "RaceRawData_" + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
-                {
-                    foreach (var row in overallData)
-                    {
-                        file.WriteLine(row);
-                    }
-                }
-
-                stopwatch.Stop();
-                Console.WriteLine("Data mine complete. Time elapsed: " + stopwatch.Elapsed);
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            finally
-            {
-                driver.Driver.Quit();
-                driver.Driver.Dispose();
-            }
+
+            stopwatch.Stop();
+            this.log.Info("Data mine complete. Total time elapsed: " + stopwatch.Elapsed);
+            driver.Driver.Quit();
+            driver.Driver.Dispose();
         }
     }
 }

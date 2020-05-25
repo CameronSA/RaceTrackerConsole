@@ -1,5 +1,6 @@
 ﻿namespace RaceTrackerConsole.LogicHelpers
 {
+    using System;
     using System.Configuration;
 
     public static class AppSettings
@@ -8,7 +9,7 @@
         { 
             get
             {
-                return ConfigurationManager.AppSettings["RaceRawDataDirectory"];
+                return AppDomain.CurrentDomain.BaseDirectory + @"RawData\";
             }
         }
 
@@ -16,7 +17,7 @@
         {
             get
             {
-                return ConfigurationManager.AppSettings["RaceProcessedDataDirectory"];
+                return AppDomain.CurrentDomain.BaseDirectory + @"ProcessedData\";
             }
         }
 
