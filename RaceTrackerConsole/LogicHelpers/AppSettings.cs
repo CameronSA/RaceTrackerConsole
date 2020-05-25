@@ -5,6 +5,14 @@
 
     public static class AppSettings
     {
+        public static string OldestDateMinedFile
+        {
+            get
+            {
+                return AppDomain.CurrentDomain.BaseDirectory + "OldestDateMined.txt";
+            }
+        }
+
         public static string RaceRawDataDirectory
         { 
             get
