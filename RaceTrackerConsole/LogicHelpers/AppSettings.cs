@@ -21,6 +21,22 @@
             }
         }
 
+        public static string RawDataFilePrefix
+        {
+            get
+            {
+                return "RaceRawData_";
+            }
+        }
+
+        public static string ProcessedDataFilePrefix
+        {
+            get
+            {
+                return "RaceProcessedData_";
+            }
+        }
+
         public static string RaceDataWebsite
         {
             get

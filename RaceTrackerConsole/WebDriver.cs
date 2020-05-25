@@ -59,7 +59,7 @@ namespace RaceTrackerConsole
             }
             catch (Exception e)
             {
-                this.log.Error("An error occured whilst extracting urls for date '" + date.Year + "-" + date.Month + "-" + date.Day + "'. Data may be incomplete", e);
+                this.log.Error("An error occured whilst extracting urls for date '" + date.Year + "-" + date.Month + "-" + date.Day + "'. Data may be incomplete", ExceptionLogger.LogException(e));
             }
 
             return resultsUrls;
@@ -114,7 +114,7 @@ namespace RaceTrackerConsole
             }
             catch (Exception e)
             {
-                this.log.Error("An error was encountered whilst processing data for url '" + url + "'. Data may be incomplete", e);
+                this.log.Error("An error was encountered whilst processing data for url '" + url + "'. Data may be incomplete", ExceptionLogger.LogException(e));
             }
 
             tableRows.Insert(0, tableHeaders);
@@ -153,7 +153,7 @@ namespace RaceTrackerConsole
             }
             catch (Exception e)
             {
-                this.log.Error("An error was encountered whilst processing headers for url '" + url + "'. Data may be incomplete", e);
+                this.log.Error("An error was encountered whilst processing headers for url '" + url + "'. Data may be incomplete", ExceptionLogger.LogException(e));
             }
 
             return headers;

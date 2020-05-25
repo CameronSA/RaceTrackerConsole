@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,44 +13,162 @@ namespace RaceTrackerConsole
     public class DataProcessing
     {
         private readonly Log log;
+
         public DataProcessing()
         {
             this.log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
         }
 
-        public void FormatDailyData(DateTime date)
+        public void FormatDailyData(List<DateTime> dates)
         {
-            string dateString = date.Year + "-" + date.Month + "-" + date.Day;
-            foreach (var file in Directory.GetFiles(AppSettings.RaceRawDataDirectory))
+            foreach (var date in dates)
             {
-                if (file.Contains(dateString))
+                string dateString = date.Year + "-" + date.Month + "-" + date.Day;
+                foreach (var file in Directory.GetFiles(AppSettings.RaceRawDataDirectory))
                 {
-                    var processedLines = new List<string>();
-                    using (var fileReader = new StreamReader(file))
+                    if (file.Contains(dateString))
                     {
-                        int counter = 0;
-                        do
-                        {
-                            string line = FormatLine(fileReader.ReadLine(), counter == 0);
-                            processedLines.Add(line);
-                            counter++;
-                        } while (!fileReader.EndOfStream);
-                    }
-
-                    if (!Directory.Exists(AppSettings.RaceProcessedDataDirectory))
-                    {
-                        Directory.CreateDirectory(AppSettings.RaceProcessedDataDirectory);
-                    }
-
-                    using (var fileWriter = new StreamWriter(AppSettings.RaceProcessedDataDirectory + "RaceProcessedData_" + dateString + ".txt"))
-                    {
-                        foreach (var line in processedLines)
-                        {
-                            fileWriter.WriteLine(line);
-                        }
+                        this.FormatFileData(file);
                     }
                 }
             }
+        }
+
+        public void FormatFileData(string file)
+        {
+            this.log.Info("Processing file '" + file + "'. . .");
+            var processedLines = new List<string>();
+            var reportHeaders = new List<string>();
+            using (var fileReader = new StreamReader(file))
+            {
+                int counter = 0;
+                var headers = new List<Tuple<string, string>>();
+                do
+                {
+                    string line = fileReader.ReadLine();
+                    if (line.StartsWith("ReportHeader:"))
+                    {
+                        reportHeaders.Add(line);
+                    }
+                    else
+                    {
+                        string processedLine;
+                        if (counter == 0)
+                        {
+                            headers = this.FormatReportHeaders(reportHeaders);
+                            processedLine = FormatLine(line, true);
+                            for (int i = headers.Count - 1; i >= 0; i--)
+                            {
+                                processedLine = headers[i].Item1 + AppSettings.Delimiter + processedLine;
+                            }
+                        }
+                        else
+                        {
+                            if (headers.Count > 0)
+                            {
+                                processedLine = FormatLine(line, false);
+                                for (int i = headers.Count - 1; i >= 0; i--)
+                                {
+                                    processedLine = headers[i].Item2 + AppSettings.Delimiter + processedLine;
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("Failed to process report header information for file '" + file + "'. Header information count: " + headers.Count);
+                            }
+                        }
+
+                        processedLines.Add(processedLine);
+                        Console.WriteLine(processedLine);
+                        counter++;
+                    }
+                } while (!fileReader.EndOfStream);
+            }
+
+            if (!Directory.Exists(AppSettings.RaceProcessedDataDirectory))
+            {
+                Directory.CreateDirectory(AppSettings.RaceProcessedDataDirectory);
+            }
+
+            string newFilePath = file.Replace(AppSettings.RaceRawDataDirectory, AppSettings.RaceProcessedDataDirectory).Replace(AppSettings.RawDataFilePrefix, AppSettings.ProcessedDataFilePrefix);
+            using (var fileWriter = new StreamWriter(newFilePath))
+            {
+                foreach (var line in processedLines)
+                {
+                    fileWriter.WriteLine(line);
+                }
+            }
+
+            this.log.Info("Finished processing file '" + file + "'");
+        }
+
+        private List<Tuple<string, string>> FormatReportHeaders(List<string> headers)
+        {
+            var formattedHeaders = new List<Tuple<string, string>>();
+
+            var headerStringBuilder = new StringBuilder(string.Empty);
+            foreach(var header in headers)
+            {
+                headerStringBuilder.Append(header);
+            }
+
+            string headerString = headerStringBuilder.ToString().Replace("ReportHeader:", string.Empty);
+            var titleList = new string[] { "Distance", "Prize", "Age", "Race Type", "Going" };
+            foreach (var title in titleList)
+            {
+                int numberOccurances = this.FindNumberOfOccurances(headerString, title);
+                if (numberOccurances == 0)
+                {
+                    throw new Exception("Could not find data field '" + title + "' in header string '" + headerString + "'");
+                }
+                else if(numberOccurances>1)
+                {
+                    throw new Exception("Found multiple occurances of data field '" + title + "' in header string '" + headerString + "'");
+                }
+            }
+
+            for (int i = 0; i < titleList.Length; i++)
+            {
+                formattedHeaders.Add(this.ExtractInformation(headerString, titleList[i], titleList[i == titleList.Length - 1 ? i : i + 1]));
+            }
+
+            return formattedHeaders;
+        }
+
+        private Tuple<string, string> ExtractInformation(string header, string field, string nextField)
+        {
+            string substr;
+            int fieldIndex = header.IndexOf(field);
+            int nextFieldIndex = header.IndexOf(nextField);
+            if (field == nextField)
+            {
+                substr = header.Substring(fieldIndex);
+            }
+            else
+            {
+                substr = header.Substring(fieldIndex, nextFieldIndex - fieldIndex);
+            }
+
+            var elements = substr.Split(':');
+            if (elements.Length == 2)
+            {
+                return new Tuple<string, string>(elements[0].Trim(), elements[1].Trim());
+            }
+            else
+            {
+                throw new Exception("Failed to find distance information in header '" + header + "'. Information found: " + substr);
+            }
+        }
+
+        private int FindNumberOfOccurances(string str, string searchItem)
+        {
+            int number = 0;
+            for (int i = str.IndexOf(searchItem); i > -1; i = str.IndexOf(searchItem, i + 1))
+            {
+                number++;
+            }
+
+            return number;
         }
 
         private string FormatLine(string line, bool isHeader)
@@ -192,7 +311,7 @@ namespace RaceTrackerConsole
                             }
                             catch (Exception e)
                             {
-                                this.log.Error("Failed to process cell '" + cell + "'. " + e.Message);
+                                this.log.Error("Failed to process cell '" + cell + "'. " + ExceptionLogger.LogException(e).Message);
                                 formattedLine.Append("ERROR" + AppSettings.Delimiter + "ERROR");
                             }
 
@@ -201,12 +320,11 @@ namespace RaceTrackerConsole
                 }
                 catch (Exception e)
                 {
-                    this.log.Error("Error encountered whilst processing cell '" + cell + "'", e);
+                    this.log.Error("Error encountered whilst processing cell '" + cell + "'", ExceptionLogger.LogException(e));
                     formattedLine.Append("ERROR");
                 }
             }
 
-            Console.WriteLine(formattedLine.ToString());
             return formattedLine;
         }
     }

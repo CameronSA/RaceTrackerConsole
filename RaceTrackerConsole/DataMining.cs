@@ -68,7 +68,7 @@
                     }
                     catch (Exception e)
                     {
-                        this.log.Error("An error occurred whilst mining data: ", e);
+                        this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e));
                     }
 
                     if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
@@ -76,7 +76,7 @@
                         Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
                     }
 
-                    using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + "RaceRawData_" + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
+                    using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
                     {
                         foreach (var row in overallData)
                         {
@@ -89,7 +89,7 @@
                 }
                 catch (Exception e)
                 {
-                    this.log.Error(e.Message);
+                    this.log.Error(ExceptionLogger.LogException(e).Message);
                 }
             }
 
