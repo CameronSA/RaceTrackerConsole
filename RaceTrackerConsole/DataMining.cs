@@ -40,8 +40,8 @@
                         if (urls.Count > 0)
                         {
                             bool columnHeadersAdded = false;
-                            for (int i = 0; i < urls.Count; i++)
-                            //for (int i = 0; i < 1; i++)
+                            //for (int i = 0; i < urls.Count; i++)
+                            for (int i = 0; i < 1; i++)
                             {
                                 var urlData = driver.GetRawRaceData(urls[i]);
                                 for (int n = 0; n < urlData.Count; n++)
@@ -85,7 +85,15 @@
                         }
                     }
 
-                    this.UpdateOldestDateMinedFile(date);
+                    if(this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
+                    {
+                        this.log.Info("Updated oldest date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+                    }
+
+                    if (this.UpdateDateMinedFiles(date, AppSettings.MostRecentDateMinedFile, true))
+                    {
+                        this.log.Info("Updated most recent date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+                    }
 
                     dateStopwatch.Stop();
                     this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed);
@@ -102,39 +110,53 @@
             driver.Driver.Dispose();
         }
 
-        private void UpdateOldestDateMinedFile(DateTime date)
+        private bool UpdateDateMinedFiles(DateTime date,string filePath, bool updateIfMoreRecent)
         {
             DateTime currentDate;
             bool update = false;
-            bool fileExists = File.Exists(AppSettings.OldestDateMinedFile);
+            bool fileExists = File.Exists(filePath);
             if (fileExists)
             {
                 try
                 {
-                    using (var file = new StreamReader(AppSettings.OldestDateMinedFile))
+                    using (var file = new StreamReader(filePath))
                     {
                         string text = file.ReadToEnd().Trim();
                         currentDate = DateTime.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                        if(currentDate>date)
+                        if (updateIfMoreRecent)
                         {
-                            update = true;
+                            if (date > currentDate)
+                            {
+                                update = true;
+                            }
+                        }
+                        else
+                        {
+                            if (currentDate > date)
+                            {
+                                update = true;
+                            }
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Failed to Read date from file '" + AppSettings.OldestDateMinedFile + "'. File not updated: " + e.Message);
-                    return;
+                    Console.WriteLine("Failed to Read date from file '" + filePath + "'. File not updated: " + e.Message);
+                    return false;
                 }
             }
 
             if(update || !fileExists)
             {
-                using(var file = new StreamWriter(AppSettings.OldestDateMinedFile))
+                using(var file = new StreamWriter(filePath))
                 {
                     file.WriteLine(this.FormatStringLength(date.Year.ToString(), 4) + "-" + this.FormatStringLength(date.Month.ToString(), 2) + "-" + this.FormatStringLength(date.Day.ToString(), 2));
                 }
+
+                return true;
             }
+
+            return false;
         }
 
         private string FormatStringLength(string str, int length)

@@ -103,15 +103,7 @@
         {
             if (args.Length >= 3)
             {
-                List<DateTime> dates;
-                if (args[2].ToLower() == "-recursive")
-                {
-                    dates = GetDateRange(args, 1, 2, true);
-                }
-                else
-                {
-                    dates = GetDateRange(args, 1, 2);
-                }
+                List<DateTime> dates = GetDateRange(args, 1, 2); 
 
                 if (dates.Count < 1)
                 {
@@ -128,54 +120,40 @@
             return;
         }
 
-        private static List<DateTime> GetDateRange(string[] args, int startDateIndex, int endDateIndex, bool recursive = false)
+        private static List<DateTime> GetDateRange(string[] args, int startDateIndex, int endDateIndex)
         {
             DateTime startDate, endDate;
+            bool reverse = false;
             try
             {
                 if (args[startDateIndex].ToLower() == "-today")
                 {
                     startDate = DateTime.Today;
                 }
+                else if (args[startDateIndex].ToLower() == "-recursive")
+                {
+                    startDate = GetDateFromFile(AppSettings.MostRecentDateMinedFile, DateTime.Today);
+                    reverse = false;
+                }
                 else
                 {
                     startDate = DateTime.ParseExact(args[startDateIndex], "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 }
 
-                if (recursive)
+                if (args[endDateIndex].ToLower() == "-today")
                 {
-                    if(File.Exists(AppSettings.OldestDateMinedFile))
-                    {
-                        try
-                        {
-                            using (var file = new StreamReader(AppSettings.OldestDateMinedFile))
-                            {
-                                string text = file.ReadToEnd().Trim();
-                                endDate = DateTime.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                            }
-                        }
-                        catch(Exception e)
-                        {
-                            Console.WriteLine("Failed to Read date from file '" + AppSettings.OldestDateMinedFile + "': " + e.Message);
-                            throw e;
-                        }
-                    }
-                    else
-                    {
-                        endDate = DateTime.Today;
-                    }
+                    endDate = DateTime.Today;
+                }
+                else if (args[endDateIndex].ToLower() == "-recursive")
+                {
+                    endDate = GetDateFromFile(AppSettings.OldestDateMinedFile, DateTime.Today);
+                    reverse = true;
                 }
                 else
                 {
-                    if (args[endDateIndex].ToLower() == "-today")
-                    {
-                        endDate = DateTime.Today;
-                    }
-                    else
-                    {
-                        endDate = DateTime.ParseExact(args[endDateIndex], "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    }
+                    endDate = DateTime.ParseExact(args[endDateIndex], "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 }
+
             }
             catch
             {
@@ -197,25 +175,58 @@
                 dates.Add(startDate.AddDays(i));
             }
 
-            dates.Reverse();
+            if (reverse)
+            {
+                dates.Reverse();
+            }
+
             return dates;
+        }
+
+        private static DateTime GetDateFromFile(string filePath, DateTime defaultValue)
+        {
+            DateTime date;
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    using (var file = new StreamReader(filePath))
+                    {
+                        string text = file.ReadToEnd().Trim();
+                        date = DateTime.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to Read date from file '" + AppSettings.OldestDateMinedFile + "': " + e.Message);
+                    throw e;
+                }
+            }
+            else
+            {
+                log.Warn("Could not find file '" + filePath + "' to extract date. Setting date to '" + defaultValue.Year + "-" + defaultValue.Month + "-" + defaultValue.Day + "' instead");
+                date = defaultValue;
+            }
+
+            return date;
         }
 
         private static void PrintHelpMessage()
         {
             Console.WriteLine("\nRaceTrackerConsole - Application for mining horse racing data. Created by C. Simpson-Allsop\n");
             Console.WriteLine("Commands:\n");
-            Console.WriteLine("\t-help :=: Prints this page.");
-            Console.WriteLine("\t-minedata [startdate] [enddate] :=: Mines all horse racing data within the specified date range, starting from the most recent date (May take a long time depending on the size of the date range).");
-            Console.WriteLine("\t-minedata [startdate] -recursive :=: Mines all horse racing data, starting from the oldest date mined and working backwards until the start date is reached (May take a long time depending on the size of the date range).");
-            Console.WriteLine("\t-processdata -daterange [startdate] [enddate] :=: Processes raw data obtained via mining into an analysable format, within the specified date range, starting from the most recent date.");
-            Console.WriteLine("\t-processdata -all :=: Processes all raw data obtained via mining into an analysable format.");
+            Console.WriteLine("\t-help :=: Prints this page.\n");
+            Console.WriteLine("\t-minedata [startdate] [enddate] :=: Mines all horse racing data within the specified date range, starting from the most recent date (May take a long time depending on the size of the date range).\n");
+            Console.WriteLine("\t-minedata [startdate] -recursive :=: Mines all horse racing data, starting from the oldest date mined and working backwards until the start date is reached (May take a long time depending on the size of the date range).\n");
+            Console.WriteLine("\t-minedata -recursive [enddate] :=: Mines all horse racing data, starting from the most recent date mined and working forwards until the end date is reached (May take a long time depending on the size of the date range).\n");
+            Console.WriteLine("\t-processdata -daterange [startdate] [enddate] :=: Processes raw data obtained via mining into an analysable format, within the specified date range, starting from the most recent date.\n");
+            Console.WriteLine("\t-processdata -all :=: Processes all raw data obtained via mining into an analysable format.\n");
             Console.WriteLine();
             Console.WriteLine("Fields are represented by square brackets. Dates must be written in the 'yyyy-MM-dd' format. The command '-today' can be used in place of a date to use today's date.");
             Console.WriteLine("Raw data is stored in the 'RawData' directory, in the executable path directory.");
             Console.WriteLine("Processed data is stored in the 'ProcessedData' directory, in the executable path directory.");
             Console.WriteLine("Typical times for mining one days worth of data are ~1-5 minutes, depending on the number of races on that day.");
-            Console.WriteLine("In the event of an unplanned or forced closing of the application, be sure to terminate any instances of chromedriver.exe in the task manager");
+            Console.WriteLine("In the event of an unplanned or forced closing of the application, be sure to terminate any instances of chromedriver.exe in the task manager.");
         }
     }
 }

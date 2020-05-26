@@ -12,6 +12,13 @@
                 return AppDomain.CurrentDomain.BaseDirectory + "OldestDateMined.txt";
             }
         }
+        public static string MostRecentDateMinedFile
+        {
+            get
+            {
+                return AppDomain.CurrentDomain.BaseDirectory + "MostRecentDateMined.txt";
+            }
+        }
 
         public static string RaceRawDataDirectory
         { 
