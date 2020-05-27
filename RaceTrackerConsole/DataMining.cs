@@ -57,35 +57,28 @@
         {
             try
             {
+                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
+                {
+                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
+                }
+
                 var dateStopwatch = new Stopwatch();
                 dateStopwatch.Start();
-                var overallData = new List<string>();
                 this.log.Info("Data mine initiated for date: " + date + ". . .");
-                int urlCount = 0;
                 try
                 {
                     var urls = driver.GetResultsUrls(date);
-                    urlCount = urls.Count;
                     if (urls.Count > 0)
                     {
-                        bool columnHeadersAdded = false;
                         for (int i = 0; i < urls.Count; i++)
                         //for (int i = 0; i < 1; i++)
                         {
                             var urlData = driver.GetRawRaceData(urls[i]);
-                            for (int n = 0; n < urlData.Count; n++)
+                            using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + "_" + i + ".txt"))
                             {
-                                if (urlData[n].StartsWith("ReportHeader:"))
+                                for (int n = 0; n < urlData.Count; n++)
                                 {
-                                    overallData.Add(urlData[n]);
-                                }
-                                else
-                                {
-                                    if (!columnHeadersAdded || n > 0)
-                                    {
-                                        overallData.Add(urls[i] + AppSettings.Delimiter + urlData[n]);
-                                        columnHeadersAdded = true;
-                                    }
+                                    file.WriteLine(urlData[n]);
                                 }
                             }
                         }
@@ -99,19 +92,6 @@
                 catch (Exception e)
                 {
                     this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e));
-                }
-
-                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
-                {
-                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
-                }
-
-                using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
-                {
-                    foreach (var row in overallData)
-                    {
-                        file.WriteLine(row);
-                    }
                 }
 
                 if (this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
