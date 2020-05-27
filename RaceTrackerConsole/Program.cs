@@ -37,6 +37,7 @@
                 {
                     case "-help": PrintHelpMessage(); return;
                     case "-minedata": MineData(args); return;
+                    case "-minedatafor": MineDataFor(args); return;
                     case "-processdata": ProcessData(args); return;
                     default:
                         Console.WriteLine("Invalid input argument");
@@ -48,6 +49,37 @@
             Console.WriteLine("Must provide input arguments");
             PrintHelpMessage();
             return;
+        }
+
+        private static void MineDataFor(string[] args)
+        {
+            if (args.Length >= 2)
+            {
+                if (double.TryParse(args[1], out double hours))
+                {
+                    if(hours<0)
+                    {
+                        Console.WriteLine("Number of hours cannot be negative");
+                        PrintHelpMessage();
+                        return;
+                    }
+
+                    var dataMining = new DataMining();
+                    dataMining.DailyDataFor(hours);
+                }
+                else
+                {
+                    Console.WriteLine("Failed to parse '" + args[1] + "' as a valid number of hours");
+                    PrintHelpMessage();
+                    return;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Must specify number of hours");
+                PrintHelpMessage();
+                return;
+            }
         }
 
         private static void ProcessData(string[] args)
@@ -132,7 +164,7 @@
                 }
                 else if (args[startDateIndex].ToLower() == "-recursive")
                 {
-                    startDate = GetDateFromFile(AppSettings.MostRecentDateMinedFile, DateTime.Today);
+                    startDate = CommonFunctions.GetDateFromFile(AppSettings.MostRecentDateMinedFile, DateTime.Today);
                     reverse = false;
                 }
                 else
@@ -146,7 +178,7 @@
                 }
                 else if (args[endDateIndex].ToLower() == "-recursive")
                 {
-                    endDate = GetDateFromFile(AppSettings.OldestDateMinedFile, DateTime.Today);
+                    endDate = CommonFunctions.GetDateFromFile(AppSettings.OldestDateMinedFile, DateTime.Today);
                     reverse = true;
                 }
                 else
@@ -183,34 +215,6 @@
             return dates;
         }
 
-        private static DateTime GetDateFromFile(string filePath, DateTime defaultValue)
-        {
-            DateTime date;
-            if (File.Exists(filePath))
-            {
-                try
-                {
-                    using (var file = new StreamReader(filePath))
-                    {
-                        string text = file.ReadToEnd().Trim();
-                        date = DateTime.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Failed to Read date from file '" + AppSettings.OldestDateMinedFile + "': " + e.Message);
-                    throw e;
-                }
-            }
-            else
-            {
-                log.Warn("Could not find file '" + filePath + "' to extract date. Setting date to '" + defaultValue.Year + "-" + defaultValue.Month + "-" + defaultValue.Day + "' instead");
-                date = defaultValue;
-            }
-
-            return date;
-        }
-
         private static void PrintHelpMessage()
         {
             Console.WriteLine("\nRaceTrackerConsole - Application for mining horse racing data. Created by C. Simpson-Allsop\n");
@@ -219,6 +223,7 @@
             Console.WriteLine("\t-minedata [startdate] [enddate] :=: Mines all horse racing data within the specified date range, starting from the most recent date (May take a long time depending on the size of the date range).\n");
             Console.WriteLine("\t-minedata [startdate] -recursive :=: Mines all horse racing data, starting from the oldest date mined and working backwards until the start date is reached (May take a long time depending on the size of the date range).\n");
             Console.WriteLine("\t-minedata -recursive [enddate] :=: Mines all horse racing data, starting from the most recent date mined and working forwards until the end date is reached (May take a long time depending on the size of the date range).\n");
+            Console.WriteLine("\t-minedatafor [hours] :=: Mines all horse racing data, starting from the oldest date mined and working backwards for the given amount of time. Decimal times are accepted. Given time is approximate.\n");
             Console.WriteLine("\t-processdata -daterange [startdate] [enddate] :=: Processes raw data obtained via mining into an analysable format, within the specified date range, starting from the most recent date.\n");
             Console.WriteLine("\t-processdata -all :=: Processes all raw data obtained via mining into an analysable format.\n");
             Console.WriteLine();

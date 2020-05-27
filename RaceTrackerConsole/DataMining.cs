@@ -7,8 +7,6 @@
     using System.Globalization;
     using System.IO;
     using System.Reflection;
-    using System.Runtime.CompilerServices;
-    using System.Security.Policy;
 
     public class DataMining
     {
@@ -19,6 +17,26 @@
             this.log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
         }
 
+        public void DailyDataFor(double hours)
+        {
+            var startDate = CommonFunctions.GetDateFromFile(AppSettings.OldestDateMinedFile, DateTime.Today);
+            var stopwatch = new Stopwatch();
+            var driver = new WebDriver();
+            int counter = 0;
+            stopwatch.Start();
+            do
+            {
+                var date = startDate.AddDays(-1);
+                this.GetData(driver, stopwatch, date, hours);
+                counter++;
+            } while (stopwatch.Elapsed < TimeSpan.FromHours(hours));
+
+            stopwatch.Stop();
+            this.log.Info("Data mine complete. Total time elapsed: " + stopwatch.Elapsed);
+            driver.Driver.Quit();
+            driver.Driver.Dispose();
+        }
+
         public void DailyData(List<DateTime> dates)
         {
             var driver = new WebDriver();
@@ -26,88 +44,100 @@
             stopwatch.Start();
             foreach (var date in dates)
             {
-                try
-                {
-                    var dateStopwatch = new Stopwatch();
-                    dateStopwatch.Start();
-                    var overallData = new List<string>();
-                    this.log.Info("Data mine initiated for date: " + date + ". . .");
-                    int urlCount = 0;
-                    try
-                    {
-                        var urls = driver.GetResultsUrls(date);
-                        urlCount = urls.Count;
-                        if (urls.Count > 0)
-                        {
-                            bool columnHeadersAdded = false;
-                            //for (int i = 0; i < urls.Count; i++)
-                            for (int i = 0; i < 1; i++)
-                            {
-                                var urlData = driver.GetRawRaceData(urls[i]);
-                                for (int n = 0; n < urlData.Count; n++)
-                                {
-                                    if (urlData[n].StartsWith("ReportHeader:"))
-                                    {
-                                        overallData.Add(urlData[n]);
-                                    }
-                                    else
-                                    {
-                                        if (!columnHeadersAdded || n > 0)
-                                        {
-                                            overallData.Add(urls[i] + AppSettings.Delimiter + urlData[n]);
-                                            columnHeadersAdded = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            this.log.Warn("No Urls found, terminating process for date '" + date + "'");
-                            continue;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e));
-                    }
-
-                    if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
-                    {
-                        Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
-                    }
-
-                    using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
-                    {
-                        foreach (var row in overallData)
-                        {
-                            file.WriteLine(row);
-                        }
-                    }
-
-                    if(this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
-                    {
-                        this.log.Info("Updated oldest date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
-                    }
-
-                    if (this.UpdateDateMinedFiles(date, AppSettings.MostRecentDateMinedFile, true))
-                    {
-                        this.log.Info("Updated most recent date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
-                    }
-
-                    dateStopwatch.Stop();
-                    this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed);
-                }
-                catch (Exception e)
-                {
-                    this.log.Error(ExceptionLogger.LogException(e).Message);
-                }
+                this.GetData(driver, stopwatch, date, -1);
             }
 
             stopwatch.Stop();
             this.log.Info("Data mine complete. Total time elapsed: " + stopwatch.Elapsed);
             driver.Driver.Quit();
             driver.Driver.Dispose();
+        }
+
+        private void GetData(WebDriver driver, Stopwatch stopwatch, DateTime date, double hours)
+        {
+            try
+            {
+                var dateStopwatch = new Stopwatch();
+                dateStopwatch.Start();
+                var overallData = new List<string>();
+                this.log.Info("Data mine initiated for date: " + date + ". . .");
+                int urlCount = 0;
+                try
+                {
+                    var urls = driver.GetResultsUrls(date);
+                    urlCount = urls.Count;
+                    if (urls.Count > 0)
+                    {
+                        bool columnHeadersAdded = false;
+                        for (int i = 0; i < urls.Count; i++)
+                        //for (int i = 0; i < 1; i++)
+                        {
+                            var urlData = driver.GetRawRaceData(urls[i]);
+                            for (int n = 0; n < urlData.Count; n++)
+                            {
+                                if (urlData[n].StartsWith("ReportHeader:"))
+                                {
+                                    overallData.Add(urlData[n]);
+                                }
+                                else
+                                {
+                                    if (!columnHeadersAdded || n > 0)
+                                    {
+                                        overallData.Add(urls[i] + AppSettings.Delimiter + urlData[n]);
+                                        columnHeadersAdded = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        this.log.Warn("No Urls found, terminating process for date '" + date + "'");
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e));
+                }
+
+                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
+                {
+                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
+                }
+
+                using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + ".txt"))
+                {
+                    foreach (var row in overallData)
+                    {
+                        file.WriteLine(row);
+                    }
+                }
+
+                if (this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
+                {
+                    this.log.Info("Updated oldest date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+                }
+
+                if (this.UpdateDateMinedFiles(date, AppSettings.MostRecentDateMinedFile, true))
+                {
+                    this.log.Info("Updated most recent date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+                }
+
+                dateStopwatch.Stop();
+                string timeRemaining = string.Empty;
+                if (hours > 0)
+                {
+                    var remaining = TimeSpan.FromHours(hours) - stopwatch.Elapsed;
+                    timeRemaining = " Approximate time remaining: " + remaining;
+                }
+
+                this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed + timeRemaining);
+            }
+            catch (Exception e)
+            {
+                this.log.Error(ExceptionLogger.LogException(e).Message);
+            }
         }
 
         private bool UpdateDateMinedFiles(DateTime date,string filePath, bool updateIfMoreRecent)

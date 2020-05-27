@@ -62,6 +62,7 @@
     <Compile Include="DataMining.cs" />
     <Compile Include="DataProcessing.cs" />
     <Compile Include="LogicHelpers\AppSettings.cs" />
+    <Compile Include="LogicHelpers\CommonFunctions.cs" />
     <Compile Include="LogicHelpers\ExceptionLogger.cs" />
     <Compile Include="LogicHelpers\Log.cs" />
     <Compile Include="Program.cs" />
