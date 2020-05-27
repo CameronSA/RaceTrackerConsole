@@ -26,9 +26,9 @@
             stopwatch.Start();
             do
             {
-                var date = startDate.AddDays(-1);
+                var date = startDate.AddDays(counter);
                 this.GetData(driver, stopwatch, date, hours);
-                counter++;
+                counter--;
             } while (stopwatch.Elapsed < TimeSpan.FromHours(hours));
 
             stopwatch.Stop();
