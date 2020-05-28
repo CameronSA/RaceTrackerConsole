@@ -311,7 +311,7 @@ namespace RaceTrackerConsole
                             }
                             catch (Exception e)
                             {
-                                this.log.Error("Failed to process cell '" + cell + "'. " + ExceptionLogger.LogException(e).Message);
+                                this.log.Error("Failed to process cell '" + cell + "'. " + ExceptionLogger.LogException(e, cell).Item2.Message);
                                 formattedLine.Append("ERROR" + AppSettings.Delimiter + "ERROR");
                             }
 
@@ -320,7 +320,7 @@ namespace RaceTrackerConsole
                 }
                 catch (Exception e)
                 {
-                    this.log.Error("Error encountered whilst processing cell '" + cell + "'", ExceptionLogger.LogException(e));
+                    this.log.Error("Error encountered whilst processing cell '" + cell + "'", ExceptionLogger.LogException(e, cell).Item2);
                     formattedLine.Append("ERROR");
                 }
             }

@@ -55,69 +55,63 @@
 
         private void GetData(WebDriver driver, Stopwatch stopwatch, DateTime date, double hours)
         {
+            if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
+            {
+                Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
+            }
+
+            var dateStopwatch = new Stopwatch();
+            dateStopwatch.Start();
+            this.log.Info("Data mine initiated for date: " + date + ". . .");
             try
             {
-                if (!Directory.Exists(AppSettings.RaceRawDataDirectory))
+                var urls = driver.GetResultsUrls(date);
+                if (urls.Count > 0)
                 {
-                    Directory.CreateDirectory(AppSettings.RaceRawDataDirectory);
-                }
-
-                var dateStopwatch = new Stopwatch();
-                dateStopwatch.Start();
-                this.log.Info("Data mine initiated for date: " + date + ". . .");
-                try
-                {
-                    var urls = driver.GetResultsUrls(date);
-                    if (urls.Count > 0)
+                    for (int i = 0; i < urls.Count; i++)
+                    //for (int i = 0; i < 1; i++)
                     {
-                        for (int i = 0; i < urls.Count; i++)
-                        //for (int i = 0; i < 1; i++)
+                        var urlData = driver.GetRawRaceData(urls[i]);
+                        using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + "_" + i + ".txt"))
                         {
-                            var urlData = driver.GetRawRaceData(urls[i]);
-                            using (var file = new StreamWriter(AppSettings.RaceRawDataDirectory + AppSettings.RawDataFilePrefix + date.Year + "-" + date.Month + "-" + date.Day + "_" + i + ".txt"))
+                            for (int n = 0; n < urlData.Count; n++)
                             {
-                                for (int n = 0; n < urlData.Count; n++)
-                                {
-                                    file.WriteLine(urlData[n]);
-                                }
+                                file.WriteLine(urlData[n]);
                             }
                         }
                     }
-                    else
-                    {
-                        this.log.Warn("No Urls found, terminating process for date '" + date + "'");
-                        return;
-                    }
                 }
-                catch (Exception e)
+                else
                 {
-                    this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e));
+                    this.log.Warn("No Urls found, terminating process for date '" + date + "'");
+                    return;
                 }
-
-                if (this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
-                {
-                    this.log.Info("Updated oldest date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
-                }
-
-                if (this.UpdateDateMinedFiles(date, AppSettings.MostRecentDateMinedFile, true))
-                {
-                    this.log.Info("Updated most recent date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
-                }
-
-                dateStopwatch.Stop();
-                string timeRemaining = string.Empty;
-                if (hours > 0)
-                {
-                    var remaining = TimeSpan.FromHours(hours) - stopwatch.Elapsed;
-                    timeRemaining = " Approximate time remaining: " + remaining;
-                }
-
-                this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed + timeRemaining);
             }
             catch (Exception e)
             {
-                this.log.Error(ExceptionLogger.LogException(e).Message);
+                this.log.Error("An error occurred whilst mining data: ", ExceptionLogger.LogException(e, date.Year + "-" + date.Month + "-" + date.Day).Item2);
+                return;
             }
+
+            if (this.UpdateDateMinedFiles(date, AppSettings.OldestDateMinedFile, false))
+            {
+                this.log.Info("Updated oldest date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+            }
+
+            if (this.UpdateDateMinedFiles(date, AppSettings.MostRecentDateMinedFile, true))
+            {
+                this.log.Info("Updated most recent date mined to '" + date.Year + "-" + date.Month + "-" + date.Day + "'");
+            }
+
+            dateStopwatch.Stop();
+            string timeRemaining = string.Empty;
+            if (hours > 0)
+            {
+                var remaining = TimeSpan.FromHours(hours) - stopwatch.Elapsed;
+                timeRemaining = " Approximate time remaining: " + remaining;
+            }
+
+            this.log.Info("Data mine for date: " + date + " complete. Time spent on this date: " + dateStopwatch.Elapsed + ". Total time elapsed so far: " + stopwatch.Elapsed + timeRemaining);            
         }
 
         private bool UpdateDateMinedFiles(DateTime date,string filePath, bool updateIfMoreRecent)

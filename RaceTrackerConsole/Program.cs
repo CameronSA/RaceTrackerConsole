@@ -17,14 +17,14 @@
         public static void Main(string[] args)
         {
             log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
-            ExceptionLogger.Exceptions = new List<Exception>();
+            ExceptionLogger.Exceptions = new List<Tuple<string,Exception>>();
             ProcessArgs(args);
             if (ExceptionLogger.Exceptions.Count > 0)
             {
                 Console.WriteLine("\nExceptions encountered:\n");
                 foreach (var exception in ExceptionLogger.Exceptions)
                 {
-                    Console.WriteLine(exception.Message);
+                    Console.WriteLine(exception.Item1 + exception.Item2.Message);
                 }
             }
         }
@@ -117,7 +117,8 @@
                                 }
                                 catch (Exception e)
                                 {
-                                    log.Error("Error occurred whilst processing data for file '" + file + "': ", ExceptionLogger.LogException(e));
+                                    log.Error("Error occurred whilst processing data for file '" + file + "': ",
+                                    ExceptionLogger.LogException(e, file).Item2);
                                 }
                             }
                         }

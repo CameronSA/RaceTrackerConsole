@@ -8,23 +8,25 @@ namespace RaceTrackerConsole.LogicHelpers
 {
     public static class ExceptionLogger
     {
-        public static List<Exception> Exceptions { get; set; }
+        public static List<Tuple<string, Exception>> Exceptions { get; set; }
 
-        public static Exception LogException(Exception exception)
+        public static Tuple<string, Exception> LogException(Exception exception, string url)
         {
+            string message = "URL/Date: '" + url + "'. ";
+            var exceptionDetails = new Tuple<string, Exception>(message, exception);
             try
             {
-                Exceptions.Add(exception);
+                Exceptions.Add(exceptionDetails);
             }
             catch
             {
-                Exceptions = new List<Exception>
+                Exceptions = new List<Tuple<string, Exception>>
                 {
-                    exception
+                    exceptionDetails
                 };
             }
 
-            return exception;
+            return exceptionDetails;
         }
     }
 }
