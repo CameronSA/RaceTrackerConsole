@@ -112,6 +112,7 @@
                     case "-all":
                         if (Directory.Exists(AppSettings.RaceRawDataDirectory))
                         {
+                            log.Info("Started data processing procedure. . .");
                             var stopwatch = new Stopwatch();
                             stopwatch.Start();
                             foreach (var file in Directory.GetFiles(AppSettings.RaceRawDataDirectory))
@@ -128,7 +129,7 @@
                             }
 
                             stopwatch.Stop();
-                            Output.WriteLine("Data processing complete. Time elapsed: " + stopwatch.Elapsed);
+                            log.Info("Data processing complete. Time elapsed: " + stopwatch.Elapsed);
                         }
 
                         return;

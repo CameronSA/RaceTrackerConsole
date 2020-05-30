@@ -37,7 +37,7 @@ namespace RaceTrackerConsole
                 }
 
                 string outputFilepath = AppSettings.CompiledDataDirectory + filename;
-                Console.WriteLine("\nMoving processed data to file '" + outputFilepath + "'. . .");
+                this.log.Info("\nMoving processed data to file '" + outputFilepath + "'. . .");
                 bool overallHeaderAdded = false;
                 string[] overallHeaders = new string[0];
 
@@ -93,7 +93,7 @@ namespace RaceTrackerConsole
                         }
                     }
 
-                    //File.Delete(file);
+                    File.Delete(file);
                     using (var streamAppender = File.AppendText(outputFilepath))
                     {
                         if (!fileHasHeader && !headerAddedToFile)
@@ -143,13 +143,14 @@ namespace RaceTrackerConsole
             finally
             {
                 stopwatch.Stop();
-                Console.WriteLine("Data compilation complete. Time elapsed: " + stopwatch.Elapsed);
+                this.log.Info("Data compilation complete. Time elapsed: " + stopwatch.Elapsed);
             }
         }
 
         public void FormatDailyData(List<DateTime> dates)
         {
             var stopwatch = new Stopwatch();
+            this.log.Info("Started data processing procedure. . .");
             stopwatch.Start();
             foreach (var date in dates)
             {
@@ -165,12 +166,12 @@ namespace RaceTrackerConsole
             }
 
             stopwatch.Stop();
-            Output.WriteLine("Data processing complete. Time elapsed: " + stopwatch.Elapsed);
+            this.log.Info("Data processing complete. Time elapsed: " + stopwatch.Elapsed);
         }
 
         public void FormatFileData(string file)
         {
-            this.log.Info("Processing file '" + file + "'. . .");
+            Output.WriteLine("Processing file '" + file + "'. . .");
             var processedLines = new List<string>();
             var reportHeaders = new List<string>();
             using (var fileReader = new StreamReader(file))
@@ -237,7 +238,7 @@ namespace RaceTrackerConsole
                 }
             }
 
-            this.log.Info("Finished processing file '" + file + "'");
+            Output.WriteLine("Finished processing file '" + file + "'");
         }
 
         private Dictionary<string, string> FormatReportHeaders(List<string> headers)
