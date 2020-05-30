@@ -45,7 +45,8 @@ namespace RaceTrackerConsole
             this.Driver.Navigate().GoToUrl(AppSettings.RaceDataWebsite + date.Year + "-" + date.Month + "-" + date.Day);
 
             var pageBody = this.wait.Until(x => x.FindElement(By.TagName("body")));
-            var results = pageBody.FindElements(By.ClassName("results-title"));
+            var results = this.wait.Until(x => pageBody.FindElements(By.ClassName("results-title")));
+            //var results = pageBody.FindElements(By.ClassName("results-title"));
             try
             {
                 foreach (var result in results)
@@ -74,7 +75,8 @@ namespace RaceTrackerConsole
             try
             {
                 var reportBody = this.wait.Until(x => x.FindElement(By.Id("ReportBody")));
-                var reportTable = reportBody.FindElement(By.TagName("table"));
+                var reportTable = this.wait.Until(x => reportBody.FindElement(By.TagName("table")));
+                //var reportTable = reportBody.FindElement(By.TagName("table"));
                 bool firstRowPassed = false;
                 if (reportTable.GetAttribute("class") == "rp-table rp-results")
                 {
@@ -96,10 +98,10 @@ namespace RaceTrackerConsole
 
                                 if (!firstRowPassed)
                                 {
-                                    tableHeaders += title + AppSettings.Delimiter;
+                                    tableHeaders += title.Replace(AppSettings.Delimiter.ToString(), "_") + AppSettings.Delimiter;
                                 }
 
-                                tableRow += column.Text + AppSettings.Delimiter;
+                                tableRow += column.Text.Replace(AppSettings.Delimiter.ToString(), "_") + AppSettings.Delimiter;
                             }
 
                             if(!firstRowPassed)
@@ -143,7 +145,8 @@ namespace RaceTrackerConsole
             try
             {
                 var reportHeaders = this.wait.Until(x => x.FindElement(By.Id("rp-header")));
-                var headerTable = reportHeaders.FindElement(By.TagName("table"));
+                var headerTable = this.wait.Until(x => reportHeaders.FindElement(By.TagName("table")));
+                //var headerTable = reportHeaders.FindElement(By.TagName("table"));
                 if (headerTable.GetAttribute("class") == "rp-header-table")
                 {
                     var tbodyElement = headerTable.FindElement(By.TagName("tbody"));

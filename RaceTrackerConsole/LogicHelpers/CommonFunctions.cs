@@ -1,6 +1,7 @@
 ﻿namespace RaceTrackerConsole.LogicHelpers
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Reflection;
@@ -37,6 +38,22 @@
             }
 
             return date;
+        }
+
+        public static T[] SubArray<T>(T[] array, int index, int length)
+        {
+            var list = new List<T>();
+            for (int i = index; i < length; i++)
+            {
+                list.Add(array[i]);
+            }
+
+            return list.ToArray();
+        }
+
+        public static string RemoveInvalidFilenameChars(string filename, string replacementString)
+        {
+            return filename.Replace("<", replacementString).Replace(">", replacementString).Replace(":", replacementString).Replace("\"", replacementString).Replace("\\", replacementString).Replace("/", replacementString).Replace("|", replacementString).Replace("?", replacementString).Replace("*", replacementString);
         }
     }
 }

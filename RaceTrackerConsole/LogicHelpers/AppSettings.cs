@@ -5,6 +5,22 @@
 
     public static class AppSettings
     {
+        public static string Error
+        {
+            get
+            {
+                return "ERROR";
+            }
+        }
+
+        public static string Null
+        {
+            get
+            {
+                return "NULL";
+            }
+        }
+
         public static string OldestDateMinedFile
         {
             get
@@ -12,11 +28,20 @@
                 return AppDomain.CurrentDomain.BaseDirectory + "OldestDateMined.txt";
             }
         }
+
         public static string MostRecentDateMinedFile
         {
             get
             {
                 return AppDomain.CurrentDomain.BaseDirectory + "MostRecentDateMined.txt";
+            }
+        }
+
+        public static string CompiledDataDirectory
+        {
+            get
+            {
+                return AppDomain.CurrentDomain.BaseDirectory + @"CompiledData\";
             }
         }
 
