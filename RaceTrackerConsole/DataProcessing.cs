@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RaceTrackerConsole
@@ -28,6 +29,7 @@ namespace RaceTrackerConsole
             var stopwatch = new Stopwatch();
             try
             {
+                bool fileHasHeader = false;
                 stopwatch.Start();
                 if (!Directory.Exists(AppSettings.CompiledDataDirectory))
                 {
@@ -36,34 +38,102 @@ namespace RaceTrackerConsole
 
                 string outputFilepath = AppSettings.CompiledDataDirectory + filename;
                 Console.WriteLine("\nMoving processed data to file '" + outputFilepath + "'. . .");
-                bool headerAdded = false;
+                bool overallHeaderAdded = false;
+                string[] overallHeaders = new string[0];
+
+                if (File.Exists(outputFilepath))
+                {
+                    using (var streamReader = new StreamReader(outputFilepath))
+                    {
+                        overallHeaders = streamReader.ReadLine().Split(AppSettings.Delimiter);
+                    }
+
+                    overallHeaderAdded = true;
+                    fileHasHeader = true;
+                }
+
+                bool headerAddedToFile = false;
                 foreach (var file in Directory.GetFiles(AppSettings.RaceProcessedDataDirectory))
                 {
-                    var fileLines = new List<string>();
+                    bool headerAdded = false;
+                    string[] headers = new string[0];
+                    var data = new List<string[]>();
                     using (var streamReader = new StreamReader(file))
                     {
-                        if (headerAdded)
-                        {
-                            streamReader.ReadLine();
-                        }
-
                         do
                         {
-                            fileLines.Add(streamReader.ReadLine());
+                            if (!headerAdded)
+                            {
+                                headers = streamReader.ReadLine().Split(AppSettings.Delimiter);
+                                if (!overallHeaderAdded)
+                                {
+                                    overallHeaders = headers;
+                                }
+
+                                headerAdded = true;
+                            }
+                            else
+                            {
+                                data.Add(streamReader.ReadLine().Split(AppSettings.Delimiter));
+                            }
+
                         } while (!streamReader.EndOfStream);
-                        headerAdded = true;
                     }
 
-                    File.Delete(file);
-                    using (var streamAppender = File.AppendText(outputFilepath))
+                    var indexOrder = new List<int>();
+
+                    foreach (var header in headers)
                     {
-                        foreach (var line in fileLines)
+                        for (int i = 0; i < overallHeaders.Length; i++)
                         {
-                            streamAppender.WriteLine(line);
+                            if (header == overallHeaders[i])
+                            {
+                                indexOrder.Add(i);
+                            }
                         }
                     }
 
-                    Output.WriteLine("Appended '" + file + "'");
+                    //File.Delete(file);
+                    using (var streamAppender = File.AppendText(outputFilepath))
+                    {
+                        if (!fileHasHeader && !headerAddedToFile)
+                        {
+                            for (int i = 0; i < overallHeaders.Length; i++)
+                            {
+                                if (i == overallHeaders.Length - 1)
+                                {
+                                    streamAppender.Write(overallHeaders[i]);
+                                }
+                                else
+                                {
+                                    streamAppender.Write(overallHeaders[i] + AppSettings.Delimiter);
+                                }
+
+                                headerAddedToFile = true;
+                            }
+
+                            streamAppender.WriteLine();
+                        }
+
+                        foreach (var row in data)
+                        {
+                            for (int i = 0; i < indexOrder.Count; i++)
+                            {
+                                if (i == indexOrder.Count - 1)
+                                {
+                                    streamAppender.Write(row[indexOrder[i]]);
+                                }
+                                else
+                                {
+                                    streamAppender.Write(row[indexOrder[i]] + AppSettings.Delimiter);
+                                }
+                            }
+
+                            streamAppender.WriteLine();
+                        }
+
+                        Output.WriteLine("Appended '" + file + "'");
+                    }
                 }
             }
             catch (Exception e)
@@ -113,7 +183,7 @@ namespace RaceTrackerConsole
                     string line = fileReader.ReadLine();
                     if (line.StartsWith("ReportHeader:"))
                     {
-                        reportHeaders.Add(line);
+                        reportHeaders.Add(line.Replace(AppSettings.Delimiter.ToString(), string.Empty));
                     }
                     else
                     {
@@ -122,10 +192,6 @@ namespace RaceTrackerConsole
                         {
                             headers = this.FormatReportHeaders(reportHeaders);
                             processedLine = FormatLine(line, true);
-                            //for (int i = headers.Count - 1; i >= 0; i--)
-                            //{
-                            //    processedLine = headers[i].Item1 + AppSettings.Delimiter + processedLine;
-                            //}
                             foreach (var item in headers)
                             {
                                 processedLine = item.Key + AppSettings.Delimiter + processedLine;
@@ -137,10 +203,6 @@ namespace RaceTrackerConsole
                             if (headers.Count > 0)
                             {
                                 processedLine = FormatLine(line, false);
-                                //for (int i = headers.Count - 1; i >= 0; i--)
-                                //{
-                                //    processedLine = headers[i].Item2 + AppSettings.Delimiter + processedLine;
-                                //}
                                 foreach (var key in headerKeys)
                                 {
                                     processedLine = headers[key] + AppSettings.Delimiter + processedLine;
@@ -395,7 +457,14 @@ namespace RaceTrackerConsole
                         case 5:
                             if (string.IsNullOrEmpty(cell))
                             {
-                                formattedLine.Append(AppSettings.Null + AppSettings.Delimiter);
+                                if (string.IsNullOrEmpty(cells[i + 1]))
+                                {
+                                    formattedLine.Append(AppSettings.Null + AppSettings.Delimiter);
+                                }
+                                else
+                                {
+                                    formattedLine.Append(cells[i + 1] + AppSettings.Delimiter);
+                                }
                             }
                             else
                             {

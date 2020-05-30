@@ -6,6 +6,14 @@
 
     public static class AppSettings
     {
+        public static string[] ProcessedDataColumns
+        {
+            get
+            {
+                return new string[] { "Going", "Surface", "Race Type", "Age", "Rated", "Prize", "Distance", "Racetrack", "Date", "Time", "Position", "Draw", "Horse Name", "Horse Age", "Horse Weight", "ISP", "Expectation" };
+            }
+        }
+
         public static string[] ReportHeaderFieldList
         {
             get

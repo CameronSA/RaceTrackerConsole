@@ -17,7 +17,7 @@
 
         public static void Main(string[] args)
         {
-            log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
+             log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
             ExceptionLogger.Exceptions = new List<Tuple<string,Exception>>();
             ProcessArgs(args);
             if (ExceptionLogger.Exceptions.Count > 0)
