@@ -2,6 +2,7 @@
 using RaceTrackerConsole.LogicHelpers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -24,18 +25,20 @@ namespace RaceTrackerConsole
 
         public void CompileData(string filename)
         {
+            var stopwatch = new Stopwatch();
             try
             {
+                stopwatch.Start();
                 if (!Directory.Exists(AppSettings.CompiledDataDirectory))
                 {
                     Directory.CreateDirectory(AppSettings.CompiledDataDirectory);
                 }
 
                 string outputFilepath = AppSettings.CompiledDataDirectory + filename;
+                Console.WriteLine("\nMoving processed data to file '" + outputFilepath + "'. . .");
                 bool headerAdded = false;
                 foreach (var file in Directory.GetFiles(AppSettings.RaceProcessedDataDirectory))
                 {
-                    Output.WriteLine("Reading file '" + file + "'. . .");
                     var fileLines = new List<string>();
                     using (var streamReader = new StreamReader(file))
                     {
@@ -48,31 +51,36 @@ namespace RaceTrackerConsole
                         {
                             fileLines.Add(streamReader.ReadLine());
                         } while (!streamReader.EndOfStream);
-
                         headerAdded = true;
                     }
 
-                    Output.WriteLine("Successfully read file '" + file + "'. Appending contents to '" + outputFilepath + "'. . .");
+                    File.Delete(file);
                     using (var streamAppender = File.AppendText(outputFilepath))
                     {
                         foreach (var line in fileLines)
                         {
                             streamAppender.WriteLine(line);
-                            Output.WriteLine("Appended: " + line);
                         }
                     }
 
-                    Output.WriteLine("Successfully appended to file '" + outputFilepath + "'");
+                    Output.WriteLine("Appended '" + file + "'");
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 this.log.Error("Error encountered whilst compiling processed data: ", e);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                Console.WriteLine("Data compilation complete. Time elapsed: " + stopwatch.Elapsed);
             }
         }
 
         public void FormatDailyData(List<DateTime> dates)
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
             foreach (var date in dates)
             {
                 string dateString = date.Year + "-" + date.Month + "-" + date.Day;
@@ -85,6 +93,9 @@ namespace RaceTrackerConsole
                     }
                 }
             }
+
+            stopwatch.Stop();
+            Output.WriteLine("Data processing complete. Time elapsed: " + stopwatch.Elapsed);
         }
 
         public void FormatFileData(string file)
@@ -95,7 +106,8 @@ namespace RaceTrackerConsole
             using (var fileReader = new StreamReader(file))
             {
                 int counter = 0;
-                var headers = new List<Tuple<string, string>>();
+                var headers = new Dictionary<string, string>();
+                var headerKeys = new List<string>();
                 do
                 {
                     string line = fileReader.ReadLine();
@@ -110,9 +122,14 @@ namespace RaceTrackerConsole
                         {
                             headers = this.FormatReportHeaders(reportHeaders);
                             processedLine = FormatLine(line, true);
-                            for (int i = headers.Count - 1; i >= 0; i--)
+                            //for (int i = headers.Count - 1; i >= 0; i--)
+                            //{
+                            //    processedLine = headers[i].Item1 + AppSettings.Delimiter + processedLine;
+                            //}
+                            foreach (var item in headers)
                             {
-                                processedLine = headers[i].Item1 + AppSettings.Delimiter + processedLine;
+                                processedLine = item.Key + AppSettings.Delimiter + processedLine;
+                                headerKeys.Add(item.Key);
                             }
                         }
                         else
@@ -120,9 +137,13 @@ namespace RaceTrackerConsole
                             if (headers.Count > 0)
                             {
                                 processedLine = FormatLine(line, false);
-                                for (int i = headers.Count - 1; i >= 0; i--)
+                                //for (int i = headers.Count - 1; i >= 0; i--)
+                                //{
+                                //    processedLine = headers[i].Item2 + AppSettings.Delimiter + processedLine;
+                                //}
+                                foreach (var key in headerKeys)
                                 {
-                                    processedLine = headers[i].Item2 + AppSettings.Delimiter + processedLine;
+                                    processedLine = headers[key] + AppSettings.Delimiter + processedLine;
                                 }
                             }
                             else
@@ -157,22 +178,21 @@ namespace RaceTrackerConsole
             this.log.Info("Finished processing file '" + file + "'");
         }
 
-        private List<Tuple<string, string>> FormatReportHeaders(List<string> headers)
+        private Dictionary<string, string> FormatReportHeaders(List<string> headers)
         {
-            var formattedHeaders = new List<Tuple<string, string>>();
+            var formattedHeaders = new Dictionary<string, string>();
 
             var headerStringBuilder = new StringBuilder(string.Empty);
-            foreach(var header in headers)
+            foreach (var header in headers)
             {
                 headerStringBuilder.Append(header);
             }
 
             string headerString = headerStringBuilder.ToString().Replace("ReportHeader:", string.Empty);
-            var titleList = new string[] { "Distance", "Prize", "Rated", "Age", "Race Type", "Surface", "Going" };
-            foreach (var title in titleList)
+            foreach (var title in AppSettings.ReportHeaderFieldList)
             {
                 int numberOccurances = this.FindNumberOfOccurances(headerString, title);
-                if(numberOccurances>1)
+                if (numberOccurances > 1)
                 {
                     var e = new Exception("Found multiple occurances of data field '" + title + "' in header string '" + headerString + "'");
                     ExceptionLogger.LogException(e, this.file);
@@ -180,53 +200,68 @@ namespace RaceTrackerConsole
                 }
             }
 
-            for (int i = 0; i < titleList.Length; i++)
+            var fieldIndices = new Dictionary<string, int>();
+            foreach (var field in AppSettings.ReportHeaderFieldList)
             {
-                int index = i == titleList.Length - 1 ? i : i + 1;
-                var nextFields = CommonFunctions.SubArray(titleList, index, titleList.Length);
-                formattedHeaders.Add(this.ExtractInformation(headerString, titleList[i], nextFields));
+                fieldIndices.Add(field, headerString.IndexOf(field));
+            }
+
+            for (int i = 0; i < AppSettings.ReportHeaderFieldList.Length; i++)
+            {
+                int index = i == AppSettings.ReportHeaderFieldList.Length - 1 ? i : i + 1;
+                var info = this.ExtractInformation(headerString, AppSettings.ReportHeaderFieldList[i], fieldIndices);
+                formattedHeaders.Add(info.Item1, info.Item2);
             }
 
             return formattedHeaders;
         }
 
-        private Tuple<string, string> ExtractInformation(string header, string field, string[] nextFields)
+        private Tuple<string, string> ExtractInformation(string header, string field, Dictionary<string,int> fieldIndices)
         {
             try
             {
-                string substr;
+                string substr = string.Empty;
+                string nextField = string.Empty;
+                int nextFieldIndex = 0;
                 int fieldIndex = header.IndexOf(field);
                 if (fieldIndex < 0)
                 {
-                    this.log.Warn("Field: '" + field + "' not found");
                     return new Tuple<string, string>(field, AppSettings.Null);
                 }
-                int nextFieldIndex = -1;
-                string nextField = string.Empty;
-                for (int i = 0; i < nextFields.Length; i++)
+
+                var allIndices = new List<int>();
+                int previousDifference = 100;
+                int largestIndex = 0;
+                foreach (var index in fieldIndices)
                 {
-                    nextFieldIndex = header.IndexOf(nextFields[i]);
-                    if (nextFieldIndex > -1)
+                    if (index.Value < 0)
                     {
-                        nextField = nextFields[i];
-                        break;
+                        continue;
+                    }
+
+                    largestIndex = index.Value > largestIndex ? index.Value : largestIndex;
+                    int difference = index.Value - fieldIndex;
+                    if (difference > 0 && difference < previousDifference)
+                    {
+                        previousDifference = difference;
+                        nextField = index.Key;
+                        nextFieldIndex = index.Value;
                     }
                 }
 
-                try
+                if (fieldIndex == largestIndex)
                 {
-                    if (field == nextField)
-                    {
-                        substr = header.Substring(fieldIndex);
-                    }
-                    else
-                    {
-                        substr = header.Substring(fieldIndex, nextFieldIndex - fieldIndex);
-                    }
+                    substr = header.Substring(fieldIndex);
                 }
-                catch
+                else if (nextFieldIndex > 0)
                 {
-                    substr = "Failed to find with field '" + field + "' and next field '" + nextField + "'. Number of next fields - " + nextFields.Length;
+                    substr = header.Substring(fieldIndex, nextFieldIndex - fieldIndex);
+                }
+                else
+                {
+                    var e = new Exception("Failed to find " + field + " information in header '" + header + "'");
+                    ExceptionLogger.LogException(e, this.file);
+                    throw e;
                 }
 
                 Output.WriteLine(field + " info: '" + substr + "'");

@@ -2,9 +2,18 @@
 {
     using System;
     using System.Configuration;
+    using System.Data.SqlClient;
 
     public static class AppSettings
     {
+        public static string[] ReportHeaderFieldList
+        {
+            get
+            {
+                return new string[] { "Distance", "Prize", "Rated", "Age", "Race Type", "Surface", "Going" };
+            }
+        }
+
         public static string Error
         {
             get
