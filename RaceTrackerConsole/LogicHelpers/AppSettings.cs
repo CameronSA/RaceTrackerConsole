@@ -54,6 +54,22 @@
             }
         }
 
+        public static string AcknowledgedRawDataDirectory
+        {
+            get
+            {
+                return AppDomain.CurrentDomain.BaseDirectory + @"AcknowledgedRawData\";
+            }
+        }
+
+        public static string FileMonitorsDirectory
+        {
+            get
+            {
+                return AppDomain.CurrentDomain.BaseDirectory + @"FileMonitors\";
+            }
+        }
+
         public static string CompiledDataDirectory
         {
             get

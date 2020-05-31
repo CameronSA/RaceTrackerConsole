@@ -24,16 +24,22 @@ namespace RaceTrackerConsole
             this.log = new Log(MethodBase.GetCurrentMethod().DeclaringType);
         }
 
-        public void CompileData(string filename)
+        public void CompileData(string filename, bool deleteSource)
         {
             var stopwatch = new Stopwatch();
             try
             {
                 bool fileHasHeader = false;
+                string monitorFile = AppSettings.FileMonitorsDirectory + "FileContents_" + filename;
                 stopwatch.Start();
                 if (!Directory.Exists(AppSettings.CompiledDataDirectory))
                 {
                     Directory.CreateDirectory(AppSettings.CompiledDataDirectory);
+                }
+
+                if(!Directory.Exists(AppSettings.FileMonitorsDirectory))
+                {
+                    Directory.CreateDirectory(AppSettings.FileMonitorsDirectory);
                 }
 
                 string outputFilepath = AppSettings.CompiledDataDirectory + filename;
@@ -52,9 +58,32 @@ namespace RaceTrackerConsole
                     fileHasHeader = true;
                 }
 
+                var containedFilenames = new List<string>();
+                if (File.Exists(monitorFile))
+                {
+                    using (var streamReader = new StreamReader(monitorFile))
+                    {
+                        do
+                        {
+                            containedFilenames.Add(streamReader.ReadLine());
+                        } while (!streamReader.EndOfStream);
+                    }
+                }
+
                 bool headerAddedToFile = false;
                 foreach (var file in Directory.GetFiles(AppSettings.RaceProcessedDataDirectory))
                 {
+                    string processedFilename = file.Substring(file.LastIndexOf("\\") + 1);
+                    if(containedFilenames.Contains(processedFilename))
+                    {
+                        Output.WriteLine("Skipped '" + file + "'");
+                        if (deleteSource)
+                        {
+                            File.Delete(file);
+                        }
+                        continue;
+                    }
+
                     bool headerAdded = false;
                     string[] headers = new string[0];
                     var data = new List<string[]>();
@@ -93,7 +122,11 @@ namespace RaceTrackerConsole
                         }
                     }
 
-                    File.Delete(file);
+                    if (deleteSource)
+                    {
+                        File.Delete(file);
+                    }
+
                     using (var streamAppender = File.AppendText(outputFilepath))
                     {
                         if (!fileHasHeader && !headerAddedToFile)
@@ -133,6 +166,11 @@ namespace RaceTrackerConsole
                         }
 
                         Output.WriteLine("Appended '" + file + "'");
+                    }
+
+                    using (var streamAppender = File.AppendText(monitorFile))
+                    {
+                        streamAppender.WriteLine(processedFilename);
                     }
                 }
             }
@@ -224,6 +262,11 @@ namespace RaceTrackerConsole
                 } while (!fileReader.EndOfStream);
             }
 
+            if(!Directory.Exists(AppSettings.AcknowledgedRawDataDirectory))
+            {
+                Directory.CreateDirectory(AppSettings.AcknowledgedRawDataDirectory);
+            }
+
             if (!Directory.Exists(AppSettings.RaceProcessedDataDirectory))
             {
                 Directory.CreateDirectory(AppSettings.RaceProcessedDataDirectory);
@@ -237,6 +280,9 @@ namespace RaceTrackerConsole
                     fileWriter.WriteLine(line);
                 }
             }
+
+            string acknowledgedFilePath = file.Replace(AppSettings.RaceRawDataDirectory, AppSettings.AcknowledgedRawDataDirectory);
+            File.Move(file, acknowledgedFilePath);
 
             Output.WriteLine("Finished processing file '" + file + "'");
         }

@@ -170,7 +170,7 @@
                                 return;
                             }
 
-                            dataProcessing.CompileData(filename);
+                            dataProcessing.CompileData(filename, false);
                         }
 
                         return;
@@ -185,7 +185,22 @@
                         if (Directory.Exists(AppSettings.RaceProcessedDataDirectory))
                         {
                             string filename = CommonFunctions.RemoveInvalidFilenameChars(args[2], "_");
-                            dataProcessing.CompileData(filename);
+                            dataProcessing.CompileData(filename, false);
+                        }
+
+                        return;
+                    case "-move":
+                        if (args.Length < 3)
+                        {
+                            Console.WriteLine("Not enough arguments");
+                            PrintHelpMessage();
+                            return;
+                        }
+
+                        if (Directory.Exists(AppSettings.RaceProcessedDataDirectory))
+                        {
+                            string filename = CommonFunctions.RemoveInvalidFilenameChars(args[2], "_");
+                            dataProcessing.CompileData(filename, true);
                         }
 
                         return;
@@ -293,8 +308,9 @@
             Console.WriteLine("\t-processdata -daterange [startdate] [enddate] :=: Processes raw data obtained via mining into an analysable format, within the specified date range, starting from the most recent date.\n");
             Console.WriteLine("\t-processdata -all :=: Processes all raw data obtained via mining into an analysable format.\n");
             Console.WriteLine("\t-processdata -file [filepath] :=: Processes the raw data at the given filepath into an analysable format.\n");
-            Console.WriteLine("\t-processdata -compile [filename] :=: Compiles all processed data into a single file with the given filename, deleting each file after it is added.\n");
-            Console.WriteLine("\t-processdata -append [filename] :=: Appends all processed data into a single file with the given filename, deleting each file after it is added.\n");
+            Console.WriteLine("\t-processdata -compile [filename] :=: Compiles all processed data into a single file with the given filename.\n");
+            Console.WriteLine("\t-processdata -append [filename] :=: Appends all processed data to a single file with the given filename, provided the file has not already been added.\n");
+            Console.WriteLine("\t-processdata -move [filename] :=: Appends all processed data to a single file with the given filename, provided the file has not already been added, and deleting each file after it is added.\n");
             Console.WriteLine();
             Console.WriteLine("Fields are represented by square brackets. Dates must be written in the 'yyyy-MM-dd' format. The command '-today' can be used in place of a date to use today's date.");
             Console.WriteLine("Raw data is stored in the 'RawData' directory, in the executable path directory.");
