@@ -282,6 +282,11 @@ namespace RaceTrackerConsole
             }
 
             string acknowledgedFilePath = file.Replace(AppSettings.RaceRawDataDirectory, AppSettings.AcknowledgedRawDataDirectory);
+            if (File.Exists(acknowledgedFilePath))
+            {
+                File.Delete(acknowledgedFilePath);
+            }
+
             File.Move(file, acknowledgedFilePath);
 
             Output.WriteLine("Finished processing file '" + file + "'");
