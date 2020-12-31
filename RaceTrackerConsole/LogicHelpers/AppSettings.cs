@@ -22,6 +22,14 @@
             }
         }
 
+        public static string[] ReportHeaderFieldAttributesList
+        {
+            get
+            {
+                return new string[] { "Novice", "Handicap", "NH", "Class" };
+            }
+        }
+
         public static string Error
         {
             get

@@ -322,9 +322,74 @@ namespace RaceTrackerConsole
 
             for (int i = 0; i < AppSettings.ReportHeaderFieldList.Length; i++)
             {
-                int index = i == AppSettings.ReportHeaderFieldList.Length - 1 ? i : i + 1;
+                //int index = i == AppSettings.ReportHeaderFieldList.Length - 1 ? i : i + 1;
                 var info = this.ExtractInformation(headerString, AppSettings.ReportHeaderFieldList[i], fieldIndices);
                 formattedHeaders.Add(info.Item1, info.Item2);
+            }
+
+            
+            foreach(var attribute in AppSettings.ReportHeaderFieldAttributesList)
+            {
+                switch(attribute.ToLower())
+                {
+                    case "novice":
+                        formattedHeaders.Add("Novice", headerString.ToLower().Contains("novice") ? "1" : "0");                        
+                        break;
+                    case "handicap":
+                        formattedHeaders.Add("Handicap", headerString.ToLower().Contains("handicap") ? "1" : "0");
+                        break;
+                    case "nh":
+                        formattedHeaders.Add("NH", headerString.ToLower().Contains("N.H") || headerString.ToLower().Contains("national hunt") ? "1" : "0");
+                        break;
+                    case "class":
+                        string editedHeaderString = headerString;
+                        string numericClassString = string.Empty;
+                        while (editedHeaderString.Contains("(") && editedHeaderString.Contains(")"))
+                        {
+                            if (editedHeaderString.IndexOf("(") != -1 && editedHeaderString.IndexOf(")") != -1 && (string.IsNullOrEmpty(numericClassString) || numericClassString == "-1"))
+                            {
+                                int formerIndex = editedHeaderString.IndexOf("(");
+                                int length = editedHeaderString.IndexOf(")") - editedHeaderString.IndexOf("(") + 1;
+                                string possibleClassString = editedHeaderString.Substring(formerIndex, length).Trim();
+
+                                if (string.IsNullOrEmpty(numericClassString) || numericClassString == "-1")
+                                {
+                                    foreach (var character in possibleClassString)
+                                    {
+                                        if (int.TryParse(character.ToString(), out _))
+                                        {
+                                            if (numericClassString == "-1")
+                                            {
+                                                numericClassString = character.ToString();
+                                            }
+                                            else
+                                            {
+                                                numericClassString += character.ToString();
+                                            }
+                                        }
+                                        else if (character.ToString() != "(" && character.ToString() != ")")
+                                        {
+                                            numericClassString = "-1";
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    break;
+                                }
+
+                                editedHeaderString = editedHeaderString.Replace(possibleClassString, string.Empty);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }                    
+
+                        formattedHeaders.Add("Class", numericClassString == string.Empty ? "-1" : numericClassString);
+                        break;
+                }
             }
 
             return formattedHeaders;
